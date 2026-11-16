@@ -2,6 +2,8 @@
 
 NASA Space Apps project for **Harmonization of MODIS and VIIRS Hot Spots**.
 
+Web app: https://burning-season-explorer-c3q9iittmqz2qtoj8lkimt.streamlit.app/
+
 This local Streamlit demo compares September–November FIRMS hotspot detections in a Punjab–Haryana study rectangle for 2023–2025. It preserves raw sensor views and reports an experimental VIIRS-to-MODIS reference-scale baseline. MODIS is a reference sensor here, **not ground truth**.
 
 ## Run locally
