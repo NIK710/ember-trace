@@ -1,4 +1,4 @@
-# Burning Season Explorer
+# EmberTrace
 
 NASA Space Apps project for **Harmonization of MODIS and VIIRS Hot Spots**.
 
