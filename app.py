@@ -24,28 +24,31 @@ a.metric('MODIS detections after filters',f'{len(d[d.sensor=="MODIS"]):,}')
 b.metric('VIIRS detections after filters',f'{len(d[d.sensor=="VIIRS"]):,}')
 c.metric('Experimental reference-scale factor',f'{factor:.3f}')
 
-st.subheader('Sensor comparability')
-st.write('These are detection-based diagnostics from the selected quality-filter setting—not satellite observation coverage. They describe retained hotspot records only.')
-composition,timing=sensor_diagnostics(d)
-left,right=st.columns(2)
-left.caption('Satellite composition of retained detections')
-left.dataframe(composition.rename(columns={
-    'year':'Year','sensor':'Sensor','satellite':'Satellite','detections':'Detections',
-    'sensor_share_pct':'Share within sensor (%)'
-}),hide_index=True,width='stretch')
-right.caption('Detection-weighted daytime acquisition times')
-right.dataframe(timing.rename(columns={
-    'year':'Year','satellite':'Satellite','detections':'Daytime detections',
-    'median_utc':'Median UTC','approx_median_ist':'Approx. median IST'
-}),hide_index=True,width='stretch')
-st.warning('Aqua MODIS acquisition times shift later across these seasons while SNPP VIIRS times are more stable. Changing time separation confounds count comparisons because fire activity, cloud, and detectability can change between passes.')
-st.caption('The FIRMS hotspot exports do not supply observation opportunities or clear-sky masks. An unmatched or missing observation is therefore unknown and must remain distinct from a confirmed observed zero.')
-
 cal=w[w.sensor.eq('MODIS' if view=='Raw MODIS' else 'VIIRS')].copy()
 cal['activity']=cal['count']*(factor if view.startswith('Experimental') else 1)
 heat=cal.pivot(index='year',columns='week',values='activity')
-st.subheader('Compare burning-season timing')
-fig=px.imshow(heat,labels={'x':'Seven-day bin from September 1','y':'Year','color':'Activity'},color_continuous_scale='Cividis',aspect='auto')
+adjusted=view.startswith('Experimental')
+measure_label=view if adjusted else f'{view} hotspot detections'
+value_label='MODIS-reference estimate' if adjusted else 'Hotspot detections'
+date_labels=[]
+hover_data=[]
+for week in heat.columns:
+    example_start=pd.Timestamp(2023,9,1)+pd.Timedelta((int(week)-1)*7,unit='D')
+    date_labels.append(f'{example_start:%b} {example_start.day}')
+for year in heat.index:
+    row=[]
+    for week in heat.columns:
+        start=pd.Timestamp(int(year),9,1)+pd.Timedelta((int(week)-1)*7,unit='D')
+        end=start+pd.Timedelta(6,unit='D')
+        date_range=f'{start:%b} {start.day}–{end:%b} {end.day}, {year}'
+        row.append([str(year),date_range,measure_label])
+    hover_data.append(row)
+calendar_heading,calendar_note=st.columns([2,1])
+calendar_heading.subheader(f'Burning calendar — {measure_label}')
+if adjusted:
+    calendar_note.caption('Experimental calibration; differences in satellite observation times affect comparability. See sensor diagnostics below.')
+fig=px.imshow(heat,x=date_labels,y=[str(year) for year in heat.index],labels={'x':'Week starting','y':'Year','color':value_label},color_continuous_scale='Cividis',aspect='auto')
+fig.update_traces(customdata=hover_data,hovertemplate=f'Year: %{{customdata[0]}}<br>Date range: %{{customdata[1]}}<br>Measure: %{{customdata[2]}}<br>{value_label}: %{{z:{".1f" if adjusted else ".0f"}}}<extra></extra>')
 fig.update_yaxes(type='category')
 st.plotly_chart(fig,width='stretch')
 st.caption('13 consecutive seven-day bins cover September 1–November 30. Zero means no recorded detections in this export, not a confirmed observed zero. Experimental MODIS-reference activity estimates are not actual observed counts.')
@@ -67,7 +70,25 @@ st.write('Non-negative least-squares scaling through the origin, trained on 26 w
 st.dataframe(pd.DataFrame({'Baseline':['Unadjusted VIIRS','Experimental MODIS-reference activity estimate','Training total-ratio scale','Training mean MODIS'],'2025 weekly MAE':[metrics['raw_mae'],metrics['adjusted_mae'],metrics['training_total_ratio_mae'],metrics['training_mean_mae']]}),hide_index=True)
 st.caption('MAE measures absolute disagreement with MODIS. The simple scale does not correct spatial resolution, overpass time, missed small fires, clouds, or changing detection efficiency. It is an experimental baseline, not validated sensor-independent harmonization.')
 st.download_button('Download weekly analytics CSV',w.assign(experimental_modis_reference_activity_estimate=lambda t:t['count'].where(t.sensor.eq('VIIRS'))*factor).to_csv(index=False),'weekly_analytics.csv','text/csv')
-with st.expander('Method, provenance, and prevention use'):
+
+with st.expander('Sensor comparability diagnostics'):
+    st.write('These are detection-based diagnostics from the selected quality-filter setting—not satellite observation coverage. They describe retained hotspot records only.')
+    composition,timing=sensor_diagnostics(d)
+    left,right=st.columns(2)
+    left.caption('Satellite composition of retained detections')
+    left.dataframe(composition.rename(columns={
+        'year':'Year','sensor':'Sensor','satellite':'Satellite','detections':'Detections',
+        'sensor_share_pct':'Share within sensor (%)'
+    }),hide_index=True,width='stretch')
+    right.caption('Detection-weighted daytime acquisition times')
+    right.dataframe(timing.rename(columns={
+        'year':'Year','satellite':'Satellite','detections':'Daytime detections',
+        'median_utc':'Median UTC','approx_median_ist':'Approx. median IST'
+    }),hide_index=True,width='stretch')
+    st.warning('Aqua MODIS acquisition times shift later across these seasons while SNPP VIIRS times are more stable. Changing time separation confounds count comparisons because fire activity, cloud, and detectability can change between passes.')
+    st.caption('The FIRMS hotspot exports do not supply observation opportunities or clear-sky masks. An unmatched or missing observation is therefore unknown and must remain distinct from a confirmed observed zero.')
+
+with st.expander('Methodology and sources'):
     st.markdown('''**Use:** inspect repeated seasonal peaks to guide the timing of outreach and residue-management preparation. No operational prioritization or causal pollution attribution is inferred.
 
 **Quality filters:** MODIS confidence ≥30; VIIRS nominal/high; type 0 for both. These thresholds are a prototype choice and are not equivalent between sensors. Type 0 does not establish agricultural burning. Disable the filter to inspect sensitivity.
