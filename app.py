@@ -5,7 +5,7 @@ import streamlit as st
 from pipeline import load_data,filter_data,sensor_diagnostics,weekly,fit_evaluate
 
 st.set_page_config(page_title='Burning Season Explorer',layout='wide')
-st.title('Burning Season Explorer')
+st.title('EmberTrace')
 st.caption('NASA FIRMS · Punjab–Haryana study rectangle · September–November, 2023–2025')
 st.info('Historical planning prototype. The rectangle includes neighboring areas. Hotspots are detections, not unique fires or confirmed crop-residue burning. No AQI or fire forecasts are produced.')
 @st.cache_data
