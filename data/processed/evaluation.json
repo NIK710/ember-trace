@@ -1,0 +1,13 @@
+{
+  "fit_years": [
+    2023,
+    2024
+  ],
+  "evaluation_year": 2025,
+  "factor": 0.27551358993126845,
+  "raw_mae": 506.46153846153845,
+  "adjusted_mae": 167.68186998705016,
+  "training_total_ratio_mae": 167.53246611678358,
+  "training_mean_mae": 503.22485207100584,
+  "units": "MODIS-reference detections per seven-day bin; not unique fires"
+}
